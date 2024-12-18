@@ -1,46 +1,36 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const { createClient } = require('@supabase/supabase-js');
-
-const app = express();
-const port = process.env.PORT || 5000;
-
-app.use(cors());
-app.use(express.json());
+import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_KEY
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_KEY
 );
 
-app.get('/games', async (req, res) => {
-    const { data, error } = await supabase
-    .from('games')
-    .select('*');
+export default async function handler(req, res) {
+  if (req.method === 'GET') {
+    try {
+      const { data, error } = await supabase.from('games').select('*');
+      if (error) {
+        return res.status(500).json({ error: 'Error fetching data' });
+      }
+      res.status(200).json(data);
+    } catch (err) {
+      res.status(500).json({ error: 'Error fetching data' });
+    }
+  } else if (req.method === 'POST') {
+    const { date, winner, participants, sport } = req.body;
+    try {
+      const { data, error } = await supabase
+        .from('games')
+        .insert([{ date, winner, participants, sport }]);
 
-  if (error) {
-    return res.status(500).send('Error fetching data');
+      if (error) {
+        return res.status(500).json({ error: 'Error adding game' });
+      }
+      res.status(201).json(data);
+    } catch (err) {
+      res.status(500).json({ error: 'Error adding game' });
+    }
+  } else {
+    res.status(405).json({ error: 'Method Not Allowed' });
   }
-
-  res.json(data);
-});
-
-app.post('/games', async (req, res) => {
-  const { date, winner, participants, sport } = req.body;
-
-  const { data, error } = await supabase
-    .from('games')
-    .insert([
-      { date, winner, participants, sport }
-    ]);
-
-  if (error) {
-    return res.status(500).send('Error adding game');
-  }
-
-  res.json(data);
-});
-
-app.listen(port, () => {
-});
+}
