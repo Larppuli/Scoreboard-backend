@@ -7,7 +7,7 @@ const supabase = createClient(
 );
 
 const cors = Cors({
-  methods: ['GET', 'POST', 'DELETE'],
+  methods: ['GET', 'POST', 'DELETE', 'PUT'],
   origin: [process.env.ORIGIN_VERCEL_URL, process.env.ORIGIN_LOCAL_URL],
   credentials: true,
 });
@@ -27,10 +27,9 @@ export default async function handler(req, res) {
   await runMiddleware(req, res, cors);
 
   if (req.method === 'GET') {
-    const { id } = req.query; // Extract the `id` from the query string
+    const { id } = req.query;
     if (id) {
       try {
-        // Fetch the game with the given id from the 'games' table
         const { data, error } = await supabase.from('games').select('*').eq('id', id).single();
         if (error) {
           return res.status(500).json({ error: 'Error fetching data', details: error.message });
@@ -38,18 +37,17 @@ export default async function handler(req, res) {
         if (!data) {
           return res.status(404).json({ error: 'Game not found' });
         }
-        res.status(200).json(data); // Return the game data
+        res.status(200).json(data);
       } catch (err) {
         res.status(500).json({ error: 'Unexpected error fetching data', details: err.message });
       }
     } else {
-      // If no id is provided, return all games
       try {
         const { data, error } = await supabase.from('games').select('*');
         if (error) {
           return res.status(500).json({ error: 'Error fetching data', details: error.message });
         }
-        res.status(200).json(data); // Return all games
+        res.status(200).json(data);
       } catch (err) {
         res.status(500).json({ error: 'Unexpected error fetching data', details: err.message });
       }
@@ -81,6 +79,28 @@ export default async function handler(req, res) {
       res.status(200).json({ message: `Game with ID ${id} deleted successfully` });
     } catch (err) {
       res.status(500).json({ error: 'Unexpected error deleting game', details: err.message });
+    }
+  } else if (req.method === 'PUT') {
+    const { id } = req.query;
+    const { date, winner, participants, sport } = req.body;
+
+    if (!id) {
+      return res.status(400).json({ error: 'Game ID is required' });
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('games')
+        .update({ date, winner, participants, sport })
+        .eq('id', id);
+
+      if (error) {
+        return res.status(500).json({ error: 'Error updating game', details: error.message });
+      }
+
+      res.status(200).json({ message: `Game with ID ${id} updated successfully`, data });
+    } catch (err) {
+      res.status(500).json({ error: 'Unexpected error updating game', details: err.message });
     }
   } else {
     res.status(405).json({ error: 'Method Not Allowed' });
