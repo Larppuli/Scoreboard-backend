@@ -26,11 +26,14 @@ function runMiddleware(req, res, fn) {
 export default async function handler(req, res) {
   await runMiddleware(req, res, cors);
 
+  const host = req.headers.host || '';
+  const tableName = (host.includes('demo')) ? 'games_demo' : 'games';
+
   if (req.method === 'GET') {
     const { id } = req.query;
     if (id) {
       try {
-        const { data, error } = await supabase.from('games').select('*').eq('id', id).single();
+        const { data, error } = await supabase.from(tableName).select('*').eq('id', id).single();
         if (error) {
           return res.status(500).json({ error: 'Error fetching data', details: error.message });
         }
@@ -43,7 +46,7 @@ export default async function handler(req, res) {
       }
     } else {
       try {
-        const { data, error } = await supabase.from('games').select('*');
+        const { data, error } = await supabase.from(tableName).select('*');
         if (error) {
           return res.status(500).json({ error: 'Error fetching data', details: error.message });
         }
@@ -56,7 +59,7 @@ export default async function handler(req, res) {
     const { date, winner, participants, sport } = req.body;
     try {
       const { data, error } = await supabase
-        .from('games')
+        .from(tableName)
         .insert([{ date, winner, participants, sport }]);
 
       if (error) {
@@ -72,7 +75,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Game ID is required' });
     }
     try {
-      const { error } = await supabase.from('games').delete().eq('id', id);
+      const { error } = await supabase.from(tableName).delete().eq('id', id);
       if (error) {
         return res.status(500).json({ error: 'Error deleting game', details: error.message });
       }
@@ -90,7 +93,7 @@ export default async function handler(req, res) {
 
     try {
       const { data, error } = await supabase
-        .from('games')
+        .from(tableName)
         .update({ date, winner, participants, sport })
         .eq('id', id);
 
